@@ -13,5 +13,3 @@ public class ConfigServerApplication {
 	}
 
 }
-////extract the folder in the services in workspace go to file new add from
-//existing module and select the extracted folder and the choose maven

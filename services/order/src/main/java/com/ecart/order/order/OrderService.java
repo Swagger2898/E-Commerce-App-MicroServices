@@ -6,6 +6,8 @@ import com.ecart.order.kafka.OrderConfirmation;
 import com.ecart.order.kafka.OrderProducer;
 import com.ecart.order.orderline.OrderLineRequest;
 import com.ecart.order.orderline.OrderLineService;
+import com.ecart.order.payment.PaymentClient;
+import com.ecart.order.payment.PaymentRepuest;
 import com.ecart.order.product.ProductClient;
 import com.ecart.order.product.PurchaseRequest;
 import com.ecart.order.product.PurchaseResponse;
@@ -26,6 +28,7 @@ public class OrderService {
     private final ProductClient productClient;
     private final OrderLineService orderLineService;
     private final OrderProducer orderProducer;
+    private final PaymentClient paymentClient;
 
     public Integer createdOrder(OrderRequest request){
 
@@ -49,7 +52,14 @@ public class OrderService {
         }
 
         //payment
-
+        var paymentRequest= new PaymentRepuest(
+                request.amount(),
+                request.paymentMethod(),
+                order.getId(),
+                order.getReference(),
+                customer
+        );
+        paymentClient.requestOrderPayment(paymentRequest);
 
 
         //send the order-confirmation ---> notification-ms (kafka)
