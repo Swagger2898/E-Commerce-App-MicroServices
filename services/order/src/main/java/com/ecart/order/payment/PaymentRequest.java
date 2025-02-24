@@ -5,7 +5,7 @@ import com.ecart.order.order.PaymentMethod;
 
 import java.math.BigDecimal;
 
-public record PaymentRepuest(
+public record PaymentRequest(
 
         BigDecimal amount,
 

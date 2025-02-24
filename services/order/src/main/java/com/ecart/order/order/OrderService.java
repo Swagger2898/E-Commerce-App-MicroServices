@@ -7,10 +7,9 @@ import com.ecart.order.kafka.OrderProducer;
 import com.ecart.order.orderline.OrderLineRequest;
 import com.ecart.order.orderline.OrderLineService;
 import com.ecart.order.payment.PaymentClient;
-import com.ecart.order.payment.PaymentRepuest;
+import com.ecart.order.payment.PaymentRequest;
 import com.ecart.order.product.ProductClient;
 import com.ecart.order.product.PurchaseRequest;
-import com.ecart.order.product.PurchaseResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -52,7 +51,7 @@ public class OrderService {
         }
 
         //payment
-        var paymentRequest= new PaymentRepuest(
+        var paymentRequest= new PaymentRequest(
                 request.amount(),
                 request.paymentMethod(),
                 order.getId(),
