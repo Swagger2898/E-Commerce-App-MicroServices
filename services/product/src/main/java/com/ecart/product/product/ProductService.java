@@ -19,12 +19,12 @@ public class ProductService {
 
     public Integer createProduct(@Valid ProductRequest request) {
 
-        var product = mapper.toProduct(request);
+        Product product = mapper.toProduct(request);
         return repository.save(product).getId();
     }
 
     public List<ProductPurchaseResponse> purchaseProducts(List<ProductPurchaseRequest> request) {
-        var productIds = request
+        List<Integer> productIds = request
                 .stream()
                 .map(ProductPurchaseRequest :: productId)
                 .toList();
@@ -42,7 +42,7 @@ public class ProductService {
         for(int i=0;i<storedProducts.size();i++){
             var product = storedProducts.get(i);
             var productRequest = storedRequest.get(i);
-            if(product.getAvailableQuantity()<productRequest.quantity()){
+            if(product.getAvailableQuantity() < productRequest.quantity()){
                 throw new ProductPurchaseException("Insufficient stock quality for product with ID:: " +productRequest.productId());
             }
             var newAvailableQuantity = product.getAvailableQuantity() - productRequest.quantity();

@@ -28,7 +28,7 @@ public class ProductClient {
         HttpEntity<List<PurchaseRequest>> requestEntity = new HttpEntity<>(requestBody,headers);
         ParameterizedTypeReference<List<PurchaseResponse>> responseType = new ParameterizedTypeReference<>(){};
         ResponseEntity<List<PurchaseResponse>> responseEntity = restTemplate.exchange(
-                productUrl+"/puchase",
+                productUrl+"/purchase",
                 HttpMethod.POST,
                 requestEntity,
                 responseType

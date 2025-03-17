@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import org.thymeleaf.context.Context;
 
+import static notification.NotificationType.*;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -47,7 +49,7 @@ public class EmailService {
 
          Context context = new Context();
          context.setVariables(variables);
-         mimeMessageHelper.setSubject(NotificationType.PAYMENT_CONFIRMATION.getSubject());
+         mimeMessageHelper.setSubject(EmailTemplates.PAYMENT_CONFIRMATION.getSubject());
 
          try{
              String htmlTemplate = templateEngine.process(templateName,context);
@@ -84,7 +86,7 @@ public class EmailService {
 
         Context context = new Context();
         context.setVariables(variables);
-        mimeMessageHelper.setSubject(NotificationType.ORDER_CONFIRMATION.getSubject());
+        mimeMessageHelper.setSubject(EmailTemplates.ORDER_CONFIRMATION.getSubject());
 
         try{
             String htmlTemplate = templateEngine.process(templateName,context);
