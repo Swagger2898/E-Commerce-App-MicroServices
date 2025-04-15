@@ -19,9 +19,8 @@ public class CustomerService {
     private final CustomerMapper mapper;
 
     public String createCustomer(CustomerRequest request) {
-        // Save the customer and return the generated ID as a String
         var customer = customerRepository.save(mapper.toCustomer(request));
-        return customer.getId();  // This will return a String
+        return customer.getId();
     }
 
 
