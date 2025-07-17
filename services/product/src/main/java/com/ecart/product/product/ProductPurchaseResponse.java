@@ -11,4 +11,5 @@ public record ProductPurchaseResponse(
         double quantity
 
 ) {
+
 }

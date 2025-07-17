@@ -15,11 +15,13 @@ public class PaymentController {
 
     private final PaymentService service;
 
+    public record RazorpayOrderResponse(String orderId) {}
+
     @PostMapping
-    public ResponseEntity<Integer> createPayment(
+    public ResponseEntity<RazorpayOrderResponse> createPayment(
             @RequestBody @Valid PaymentRequest request
     ){
-        return ResponseEntity.ok(service.createPayment(request));
+        String orderId = service.createPayment(request);
+        return ResponseEntity.ok(new RazorpayOrderResponse(orderId));
     }
-
 }

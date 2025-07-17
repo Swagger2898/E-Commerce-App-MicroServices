@@ -24,28 +24,28 @@ public class ProductService {
     }
 
     public List<ProductPurchaseResponse> purchaseProducts(List<ProductPurchaseRequest> request) {
-        var productIds = request
+        List<Integer> productIds = request
                 .stream()
                 .map(ProductPurchaseRequest :: productId)
                 .toList();
 
-        var storedProducts = repository.findAllByIdInOrderById(productIds);
+        List<Product> storedProducts = repository.findAllByIdInOrderById(productIds);
         if(productIds.size()!=storedProducts.size()){
             throw new ProductPurchaseException("One or more products don't exist");
         }
-        var storedRequest =request
+        List<ProductPurchaseRequest> storedRequest =request
                 .stream()
                 .sorted(Comparator.comparing(ProductPurchaseRequest::productId))
                 .toList();
-        var purchasedProducts = new ArrayList<ProductPurchaseResponse>();
+        List<ProductPurchaseResponse> purchasedProducts = new ArrayList<>();
 
         for(int i=0;i<storedProducts.size();i++){
-            var product = storedProducts.get(i);
-            var productRequest = storedRequest.get(i);
+            Product product = storedProducts.get(i);
+            ProductPurchaseRequest productRequest = storedRequest.get(i);
             if(product.getAvailableQuantity()<productRequest.quantity()){
                 throw new ProductPurchaseException("Insufficient stock quality for product with ID:: " +productRequest.productId());
             }
-            var newAvailableQuantity = product.getAvailableQuantity() - productRequest.quantity();
+            double newAvailableQuantity = product.getAvailableQuantity() - productRequest.quantity();
             product.setAvailableQuantity(newAvailableQuantity);
             repository.save(product);
             purchasedProducts.add(mapper.toProductPurchaseResponse(product, productRequest.quantity()));

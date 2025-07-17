@@ -2,10 +2,9 @@ package com.ecart.notification.email;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import kafka.order.Product;
+import com.ecart.notification.kafka.order.Product;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import notification.NotificationType;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -47,7 +46,7 @@ public class EmailService {
 
          Context context = new Context();
          context.setVariables(variables);
-         mimeMessageHelper.setSubject(NotificationType.PAYMENT_CONFIRMATION.getSubject());
+         mimeMessageHelper.setSubject(EmailTemplates.PAYMENT_CONFIRMATION.getSubject());
 
          try{
              String htmlTemplate = templateEngine.process(templateName,context);
@@ -84,7 +83,7 @@ public class EmailService {
 
         Context context = new Context();
         context.setVariables(variables);
-        mimeMessageHelper.setSubject(NotificationType.ORDER_CONFIRMATION.getSubject());
+        mimeMessageHelper.setSubject(EmailTemplates.ORDER_CONFIRMATION.getSubject());
 
         try{
             String htmlTemplate = templateEngine.process(templateName,context);

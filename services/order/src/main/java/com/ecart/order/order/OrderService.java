@@ -1,6 +1,7 @@
 package com.ecart.order.order;
 
 import com.ecart.order.customer.CustomerClient;
+import com.ecart.order.customer.CustomerResponse;
 import com.ecart.order.exception.BusinessException;
 import com.ecart.order.kafka.OrderConfirmation;
 import com.ecart.order.kafka.OrderProducer;
@@ -10,6 +11,7 @@ import com.ecart.order.payment.PaymentClient;
 import com.ecart.order.payment.PaymentRequest;
 import com.ecart.order.product.ProductClient;
 import com.ecart.order.product.PurchaseRequest;
+import com.ecart.order.product.PurchaseResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,13 +33,13 @@ public class OrderService {
 
     public Integer createdOrder(OrderRequest request){
 
-        var customer = this.customerClient.findCustomerById(request.customerId())
+        CustomerResponse customer = this.customerClient.findCustomerById(request.customerId())
                 .orElseThrow(()-> new BusinessException("Cannot create order:: No customer exists with the provided Id"));
 
 
         //purchase product
-        var purchasedProducts = this.productClient.purchaseProducts(request.products());
-        var order = this.repository.save(mapper.toOrder(request));
+        List<PurchaseResponse> purchasedProducts = this.productClient.purchaseProducts(request.products());
+        Order order = this.repository.save(mapper.toOrder(request));
         for(PurchaseRequest purchaseRequest:request.products()){
             orderLineService.saveOrderLine(
                     new OrderLineRequest(
