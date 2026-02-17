@@ -1,5 +1,6 @@
 package com.ecart.order.order;
 
+import com.ecart.order.config.RazorpayOrderResponse;
 import com.ecart.order.customer.CustomerClient;
 import com.ecart.order.customer.CustomerResponse;
 import com.ecart.order.exception.BusinessException;
@@ -31,52 +32,56 @@ public class OrderService {
     private final OrderProducer orderProducer;
     private final PaymentClient paymentClient;
 
-    public Integer createdOrder(OrderRequest request){
+    public Integer createdOrder(OrderRequest request) {
 
+        // 1. Get customer details
         CustomerResponse customer = this.customerClient.findCustomerById(request.customerId())
-                .orElseThrow(()-> new BusinessException("Cannot create order:: No customer exists with the provided Id"));
+                .orElseThrow(() -> new BusinessException("Cannot create order:: No customer exists with the provided Id"));
 
+        // 2. Create Razorpay order FIRST
+        var paymentRequest = new PaymentRequest(
+                request.amount(),
+                request.paymentMethod(),
+                null, // orderId not needed yet
+                null, // reference will be filled after Razorpay gives it
+                customer
+        );
 
-        //purchase product
+        RazorpayOrderResponse razorpayResponse = paymentClient.requestOrderPayment(paymentRequest);
+        String razorpayOrderId = razorpayResponse.orderId();
+
+        // 3. Create Order with Razorpay ID as reference
+        Order order = mapper.toOrder(request); // this mapper should NOT set reference
+        order.setReference(razorpayOrderId);
+        order = repository.save(order); // now it's saved with real Razorpay reference
+
+        // 4. Save order lines
         List<PurchaseResponse> purchasedProducts = this.productClient.purchaseProducts(request.products());
-        Order order = this.repository.save(mapper.toOrder(request));
-        for(PurchaseRequest purchaseRequest:request.products()){
+
+        for (PurchaseRequest purchaseRequest : request.products()) {
             orderLineService.saveOrderLine(
                     new OrderLineRequest(
-                            null,
                             order.getId(),
                             purchaseRequest.productId(),
                             purchaseRequest.quantity()
-                    ));
-
-
+                    )
+            );
         }
 
-        //payment
-        var paymentRequest= new PaymentRequest(
-                request.amount(),
-                request.paymentMethod(),
-                order.getId(),
-                order.getReference(),
-                customer
-        );
-        paymentClient.requestOrderPayment(paymentRequest);
-
-
-        //send the order-confirmation ---> notification-ms (kafka)
+        // 5. Send order confirmation
         orderProducer.sendOrderConfirmation(
                 new OrderConfirmation(
-                        request.reference(),
+                        order.getReference(),
                         request.amount(),
                         request.paymentMethod(),
                         customer,
                         purchasedProducts
-
                 )
         );
 
-        return  order.getId();
+        return order.getId();
     }
+
 
     public List<OrderResponse> findAll() {
         return repository.findAll().stream()

@@ -23,11 +23,14 @@ import java.util.HexFormat;
 public class PaymentWebHookController {
 
     private final PaymentService paymentService; // To update payment status in your DB
-    private final String razorpayWebhookSecret = "your_webhook_secret_here"; // Set this securely (ideally in application properties)
+    private final String razorpayWebhookSecret = "68cqMF4ORLpMfHL3lxBwTt8n"; // Set this securely (ideally in application properties)
 
     @PostMapping("/webhook")
     public ResponseEntity<String> handleRazorpayWebhook(HttpServletRequest request,
                                                         @RequestHeader("X-Razorpay-Signature") String razorpaySignature) {
+
+
+
         try {
             // Read request body
             String payload = IOUtils.toString(request.getInputStream(), StandardCharsets.UTF_8);
@@ -50,11 +53,11 @@ public class PaymentWebHookController {
                 // Extract payment info
                 JsonNode paymentEntity = jsonNode.get("payload").get("payment").get("entity");
                 String paymentId = paymentEntity.get("id").asText();
-                String orderId = paymentEntity.get("order_id").asText();
+                String orderRef = paymentEntity.get("order_id").asText();
                 Integer amount = paymentEntity.get("amount").asInt();
 
                 // Call your service to mark payment successful
-                paymentService.handlePaymentCaptured(orderId, paymentId, amount);
+                paymentService.handlePaymentCaptured(orderRef, paymentId, amount);
 
                 log.info("✅ Processed 'payment.captured' for paymentId: {}", paymentId);
             }

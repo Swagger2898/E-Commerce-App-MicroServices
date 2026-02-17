@@ -1,5 +1,6 @@
 package com.ecart.order.payment;
 
+import com.ecart.order.config.RazorpayOrderResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,5 +12,5 @@ import org.springframework.web.bind.annotation.RequestBody;
 public interface PaymentClient {
 
     @PostMapping
-    Integer requestOrderPayment(@RequestBody PaymentRequest request);
+    RazorpayOrderResponse requestOrderPayment(@RequestBody PaymentRequest request);
 }

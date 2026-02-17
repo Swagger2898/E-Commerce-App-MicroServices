@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @SpringBootApplication
 @EnableAsync
 @EnableKafka
-@EnableMongoRepositories(basePackages = "notification.NotificationRepository")
+@EnableMongoRepositories(basePackages = "com.ecart.notification.notification")
 public class NotificationApplication {
 
 	public static void main(String[] args) {
