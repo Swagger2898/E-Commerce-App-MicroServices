@@ -28,7 +28,9 @@ public class Payment {
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
     private Integer orderId;
+    private String reference;
     private String orderReference; // ✅ Needed to look up payments via orderRef
+    private String gatewayOrderId;
     private String paymentId;
     @Enumerated(EnumType.STRING)
     private PaymentStatus paymentStatus;

@@ -10,6 +10,7 @@ public class OrderMapper {
                 .customerId(request.customerId())
                 .totalAmount(request.amount())
                 .paymentMethod(request.paymentMethod())
+                .status(OrderStatus.PENDING)
                 .build();
     }
 

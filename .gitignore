@@ -1,0 +1,33 @@
+# Build output
+target/
+build/
+
+# Logs
+*.log
+
+# Compiled files
+*.class
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Env / secrets
+.env
+*.pem
+*.key
+
+# Node (if any frontend)
+node_modules/
+
+# Temp
+*.tmp
+*.swp

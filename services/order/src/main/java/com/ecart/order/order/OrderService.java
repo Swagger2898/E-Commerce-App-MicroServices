@@ -1,6 +1,5 @@
 package com.ecart.order.order;
 
-import com.ecart.order.config.RazorpayOrderResponse;
 import com.ecart.order.customer.CustomerClient;
 import com.ecart.order.customer.CustomerResponse;
 import com.ecart.order.exception.BusinessException;
@@ -18,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 
@@ -33,6 +33,7 @@ public class OrderService {
     private final PaymentClient paymentClient;
 
     public Integer createdOrder(OrderRequest request) {
+        String orderReference = UUID.randomUUID().toString();
 
         // 1. Get customer details
         CustomerResponse customer = this.customerClient.findCustomerById(request.customerId())
@@ -43,17 +44,16 @@ public class OrderService {
                 request.amount(),
                 request.paymentMethod(),
                 null, // orderId not needed yet
-                null, // reference will be filled after Razorpay gives it
+                orderReference,
                 customer
         );
 
-        RazorpayOrderResponse razorpayResponse = paymentClient.requestOrderPayment(paymentRequest);
-        String razorpayOrderId = razorpayResponse.orderId();
+        paymentClient.requestOrderPayment(paymentRequest);
 
-        // 3. Create Order with Razorpay ID as reference
+        // 3. Create Order with a business UUID reference
         Order order = mapper.toOrder(request); // this mapper should NOT set reference
-        order.setReference(razorpayOrderId);
-        order = repository.save(order); // now it's saved with real Razorpay reference
+        order.setReference(orderReference);
+        order = repository.save(order);
 
         // 4. Save order lines
         List<PurchaseResponse> purchasedProducts = this.productClient.purchaseProducts(request.products());

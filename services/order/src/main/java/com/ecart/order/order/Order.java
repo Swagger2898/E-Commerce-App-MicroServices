@@ -26,11 +26,14 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(nullable = false, unique = true, updatable = false)
     private String reference;
 
     private BigDecimal totalAmount;
     @Enumerated(EnumType.STRING)
     private PaymentMethod paymentMethod;
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
     private String customerId;
 
     @OneToMany(mappedBy = "order")

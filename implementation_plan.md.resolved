@@ -1,0 +1,73 @@
+# Implementation Plan - Production Grade E-Commerce Microservices
+
+The goal is to elevate the current E-Commerce Microservices project to a production-ready state. This involves implementing robust security, enhancing observability, ensuring resiliency, preparing for scalable deployment, and establishing CI/CD pipelines.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Security Architecture**: I propose using **Keycloak** as the Identity Provider (IdP) for OIDC/OAuth2. This will require running a Keycloak container and configuring Realms/Clients.
+>
+> **Infrastructure**: I will prepare **Kubernetes** manifests for deployment. Please confirm if you have a preferred K8s environment (e.g., Minikube, EKS, AKS) or if I should target a generic local setup.
+
+## Proposed Changes
+
+### 1. Security (Authentication & Authorization)
+- **Identity Provider**: Add Keycloak to [docker-compose.yml](file:///c:/Users/asaph/Documents/Ecommerce-Microservices/E-Commerce-App-MicroServices/docker-compose.yml).
+- **Gateway Security**: Configure Spring Cloud Gateway as an OAuth2 Resource Server/Client to handle login and token relay.
+- **Service Security**: Configure microservices (Product, Order, etc.) as OAuth2 Resource Servers to validate JWTs.
+
+#### [MODIFY] [docker-compose.yml](file:///c:/Users/asaph/Documents/Ecommerce-Microservices/E-Commerce-App-MicroServices/docker-compose.yml)
+- Add Keycloak service.
+
+#### [MODIFY] [gateway/pom.xml](file:///c:/Users/asaph/Documents/Ecommerce-Microservices/E-Commerce-App-MicroServices/services/gateway/pom.xml)
+- Add `spring-boot-starter-oauth2-client` and `spring-boot-starter-security`.
+
+#### [MODIFY] [product/pom.xml](file:///c:/Users/asaph/Documents/Ecommerce-Microservices/E-Commerce-App-MicroServices/services/product/pom.xml)
+- Add `spring-boot-starter-oauth2-resource-server`.
+- *(Repeat for other services)*
+
+### 2. Resiliency & Fault Tolerance
+- **Circuit Breakers**: Implement Resilience4j in Gateway and Service-to-Service calls (e.g., Order -> Product).
+- **Retries & Timeouts**: Configure centralized resilience patterns.
+
+#### [MODIFY] [order/pom.xml](file:///c:/Users/asaph/Documents/Ecommerce-Microservices/E-Commerce-App-MicroServices/services/order/pom.xml)
+- Add `spring-cloud-starter-circuitbreaker-resilience4j`.
+
+### 3. Observability (Logging & Metrics)
+- **Centralized Logging**: Integrate with ELK Stack (Elasticsearch, Logstash, Kibana) or specific log aggregators. *For now, we will ensure JSON logging for easy ingestion.*
+- **Metrics**: Enable Prometheus endpoints via Micrometer.
+- **Tracing**: Zipkin is already present; ensure proper propagation.
+
+#### [MODIFY] [services configuration]
+- Enable `management.endpoints.web.exposure.include=*`.
+- Add Prometheus registry dependency if missing.
+
+### 4. Containerization & Orchestration
+- **Dockerfiles**: Create optimized [Dockerfile](file:///c:/Users/asaph/Documents/Ecommerce-Microservices/E-Commerce-App-MicroServices/services/product/Dockerfile) (using multi-stage builds) for each service.
+- **Kubernetes**: Create K8s manifests (Deployments, Services, ConfigMaps, Secrets, Ingress).
+
+#### [NEW] services/product/Dockerfile
+#### [NEW] services/gateway/Dockerfile
+#### [NEW] k8s/ (Directory for manifests)
+
+### 5. CI/CD Pipeline
+- **GitHub Actions**: Create a workflow to build, test, and push Docker images.
+
+#### [NEW] .github/workflows/maven-build.yml
+
+## Verification Plan
+
+### Automated Tests
+- **Unit Tests**: Run existing `mvn test` in services.
+- **Integration Tests**: Verify flow from Gateway -> Service with Auth tokens.
+
+### Manual Verification
+1.  **Security**:
+    -   Access Gateway URL -> Redirect to Keycloak Login.
+    -   Login -> Access Protected Resource (Product Service).
+    -   Access Product Service directly without token -> 401 Unauthorized.
+2.  **Resiliency**:
+    -   Stop Product Service -> Order Service handles failure gracefully (fallback/error message).
+3.  **Observability**:
+    -   Check Zipkin for trace propagation.
+    -   Check `actuator/prometheus` endpoint.
