@@ -1,8 +1,6 @@
 package com.ecart.payment.payment;
 
 import com.ecart.payment.event.PaymentEvent;
-import com.ecart.payment.notification.NotificationProducer;
-import com.ecart.payment.notification.PaymentNotificationRequest;
 import com.ecart.payment.outbox.OutboxEvent;
 import com.ecart.payment.outbox.OutboxRepository;
 import com.ecart.payment.outbox.OutboxStatus;
@@ -11,26 +9,15 @@ import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ClassPathResource;
-import java.nio.charset.StandardCharsets;
 
-
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.UUID;
-
-import static com.ecart.payment.payment.PaymentMethod.PAYPAL;
 
 @Service
 @RequiredArgsConstructor
@@ -40,24 +27,9 @@ public class PaymentService {
 
     private final PaymentRepository repository;
     private final PaymentMapper mapper;
-    private final NotificationProducer notificationProducer;
     private final OutboxRepository outboxRepository;
     private final ObjectMapper objectMapper;
     private final RazorpayClient razorpayClient; // injected from RazorpayConfig
-
-    public void sendMessage(){
-        notificationProducer.sendNotification(
-                new PaymentNotificationRequest(
-                        "orderRef",
-                        new BigDecimal(100.0),
-                        PAYPAL,
-                        "Swapnil",
-                        "Bhurkunde",
-                        "swapnil@gmail.com"
-                )
-        );
-         System.out.println("Successfull");
-                 }
 
     public PaymentController.RazorpayOrderResponse createPayment(PaymentRequest request ) {
         try {

@@ -16,6 +16,9 @@ public class OrderLineMapper {
                                 .build()
                 )
                 .productId(request.productId())
+                .productName(request.productName())
+                .productDescription(request.productDescription())
+                .purchasedPrice(request.purchasedPrice())
                 .build();
     }
 

@@ -39,4 +39,17 @@ public class ProductClient {
         return responseEntity.getBody();
     }
 
+    public ProductResponse findProductById(Integer productId) {
+        ResponseEntity<ProductResponse> responseEntity = restTemplate.getForEntity(
+                productUrl + "/" + productId,
+                ProductResponse.class
+        );
+
+        if (responseEntity.getStatusCode().isError() || responseEntity.getBody() == null) {
+            throw new BusinessException("An error occurred while fetching product details: " + responseEntity.getStatusCode());
+        }
+
+        return responseEntity.getBody();
+    }
+
 }

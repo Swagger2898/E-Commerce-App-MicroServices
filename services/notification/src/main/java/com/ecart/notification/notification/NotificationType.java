@@ -5,13 +5,11 @@ import lombok.Getter;
 @Getter
 public enum NotificationType {
 
-    ORDER_CONFIRMATION("Order Confirmation"),  // ✅ Provide subject
-    PAYMENT_CONFIRMATION("Payment Confirmation");
+    ORDER_CONFIRMATION("Order Confirmation");
 
-    private final String subject;  // ✅ Add subject field
+    private final String subject;
 
     NotificationType(String subject) {
         this.subject = subject;
     }
 }
-

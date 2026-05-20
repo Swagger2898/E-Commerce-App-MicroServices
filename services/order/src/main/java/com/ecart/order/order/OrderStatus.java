@@ -1,7 +1,9 @@
 package com.ecart.order.order;
 
 public enum OrderStatus {
-    PENDING,
+    PENDING_PAYMENT,
+    PAYMENT_FAILED,
     CONFIRMED,
+    EXPIRED,
     CANCELLED
 }

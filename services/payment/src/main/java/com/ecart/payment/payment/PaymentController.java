@@ -1,6 +1,5 @@
 package com.ecart.payment.payment;
 
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,11 +13,6 @@ public class PaymentController {
     private final PaymentService service;
 
     public record RazorpayOrderResponse(String orderId) {
-    }
-
-    @GetMapping
-    public void sendMessages() {
-        service.sendMessage();
     }
 
     @PostMapping

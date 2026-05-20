@@ -3,8 +3,6 @@ package com.ecart.order.order;
 import com.ecart.order.customer.CustomerClient;
 import com.ecart.order.customer.CustomerResponse;
 import com.ecart.order.exception.BusinessException;
-import com.ecart.order.kafka.OrderConfirmation;
-import com.ecart.order.kafka.OrderProducer;
 import com.ecart.order.orderline.OrderLineRequest;
 import com.ecart.order.orderline.OrderLineService;
 import com.ecart.order.payment.PaymentClient;
@@ -29,7 +27,6 @@ public class OrderService {
     private final OrderMapper mapper;
     private final ProductClient productClient;
     private final OrderLineService orderLineService;
-    private final OrderProducer orderProducer;
     private final PaymentClient paymentClient;
 
     public Integer createdOrder(OrderRequest request) {
@@ -58,26 +55,18 @@ public class OrderService {
         // 4. Save order lines
         List<PurchaseResponse> purchasedProducts = this.productClient.purchaseProducts(request.products());
 
-        for (PurchaseRequest purchaseRequest : request.products()) {
+        for (PurchaseResponse purchasedProduct : purchasedProducts) {
             orderLineService.saveOrderLine(
                     new OrderLineRequest(
                             order.getId(),
-                            purchaseRequest.productId(),
-                            purchaseRequest.quantity()
+                            purchasedProduct.productId(),
+                            purchasedProduct.name(),
+                            purchasedProduct.description(),
+                            purchasedProduct.price(),
+                            purchasedProduct.quantity()
                     )
             );
         }
-
-        // 5. Send order confirmation
-        orderProducer.sendOrderConfirmation(
-                new OrderConfirmation(
-                        order.getReference(),
-                        request.amount(),
-                        request.paymentMethod(),
-                        customer,
-                        purchasedProducts
-                )
-        );
 
         return order.getId();
     }

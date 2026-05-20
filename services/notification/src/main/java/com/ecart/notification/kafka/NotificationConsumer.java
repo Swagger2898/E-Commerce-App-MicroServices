@@ -1,14 +1,14 @@
 package com.ecart.notification.kafka;
 
-import com.ecart.notification.email.EmailService;
-import jakarta.mail.MessagingException;
 import com.ecart.notification.kafka.order.OrderConfirmation;
-import com.ecart.notification.kafka.payment.PaymentConfirmation;
+import com.ecart.notification.notification.Notification;
+import com.ecart.notification.notification.NotificationDeliveryService;
+import com.ecart.notification.notification.NotificationRepository;
+import com.ecart.notification.notification.NotificationStatus;
+import com.ecart.notification.notification.NotificationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.ecart.notification.notification.Notification;
-import com.ecart.notification.notification.NotificationRepository;
-import com.ecart.notification.notification.NotificationType;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
@@ -19,52 +19,55 @@ import java.time.LocalDateTime;
 @Slf4j
 public class NotificationConsumer {
 
+    private static final String ORDER_CONFIRMATION_KEY_PREFIX = "ORDER_CONFIRMATION:";
+
     private final NotificationRepository repository;
-    private final EmailService emailService;
-
-    @KafkaListener(topics = "payment-topic")
-    public void consumePaymentSuccessNotification(PaymentConfirmation paymentConfirmation) throws MessagingException {
-        log.info(String.format("Consuming the message from payment-topic Topic:: %s", paymentConfirmation));
-        repository.save(
-                Notification.builder()
-                        .type(NotificationType.PAYMENT_CONFIRMATION)
-                        .notificationDate(LocalDateTime.now())
-                        .paymentConfirmation(paymentConfirmation)
-                        .build()
-        );
-
-        //todo sendEmail
-             var customerName = paymentConfirmation.customerFirstname()+ " "+ paymentConfirmation.customerLastname();
-             emailService.sentPaymentSuccessEmail(
-                     paymentConfirmation.customerEmail(),
-                     customerName,
-                     paymentConfirmation.amount(),
-                     paymentConfirmation.orderReference()
-             );
-    }
-
+    private final NotificationDeliveryService deliveryService;
 
     @KafkaListener(topics = "order-topic")
-    public void consumeOrderSuccessNotification(OrderConfirmation orderConfirmation) throws MessagingException {
-        log.info(String.format("Consuming the message from order-topic Topic:: %s", orderConfirmation));
-        repository.save(
-                Notification.builder()
-                        .type(NotificationType.ORDER_CONFIRMATION)
-                        .notificationDate(LocalDateTime.now())
-                        .orderConfirmation(orderConfirmation)
-                        .build()
-        );
+    public void consumeOrderSuccessNotification(OrderConfirmation orderConfirmation) {
+        String businessKey = ORDER_CONFIRMATION_KEY_PREFIX + orderConfirmation.orderReference();
+        log.info("Received order confirmation notification event. businessKey={}, orderReference={}",
+                businessKey, orderConfirmation.orderReference());
 
-        //todo sendEmail
-        var customerName = orderConfirmation.customer().firstName()+ " "+ orderConfirmation.customer().lastName();
-        emailService.sentOrderConfirmationEmail(
-                orderConfirmation.customer().email(),
-                customerName,
-                orderConfirmation.totalAmount(),
-                orderConfirmation.orderReference(),
-                orderConfirmation.products()
-        );
+        Notification existing = repository.findByBusinessKey(businessKey).orElse(null);
+        if (existing != null) {
+            if (existing.getStatus() == NotificationStatus.EMAIL_SENT) {
+                log.info("Skipping duplicate delivered notification event. businessKey={}, status={}",
+                        businessKey, existing.getStatus());
+                return;
+            }
+
+            log.info("Skipping duplicate Kafka-triggered retry. businessKey={}, status={}, retryCount={}, nextAttemptAt={}",
+                    businessKey, existing.getStatus(), existing.getRetryCount(), existing.getNextAttemptAt());
+            return;
+        }
+
+        Notification notification = createReceivedNotification(businessKey, orderConfirmation);
+        deliveryService.attemptDelivery(notification, "kafka");
     }
 
+    private Notification createReceivedNotification(String businessKey, OrderConfirmation orderConfirmation) {
+        Notification notification = Notification.builder()
+                .businessKey(businessKey)
+                .type(NotificationType.ORDER_CONFIRMATION)
+                .status(NotificationStatus.RECEIVED)
+                .createdAt(LocalDateTime.now())
+                .nextAttemptAt(LocalDateTime.now())
+                .retryCount(0)
+                .maxRetryReached(false)
+                .orderConfirmation(orderConfirmation)
+                .build();
 
+        try {
+            Notification saved = repository.save(notification);
+            log.info("Stored new notification record. businessKey={}, status={}",
+                    businessKey, saved.getStatus());
+            return saved;
+        } catch (DuplicateKeyException e) {
+            log.info("Detected concurrent duplicate notification creation. businessKey={}", businessKey);
+            return repository.findByBusinessKey(businessKey)
+                    .orElseThrow(() -> e);
+        }
+    }
 }

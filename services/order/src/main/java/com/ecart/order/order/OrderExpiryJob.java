@@ -20,10 +20,13 @@ public class OrderExpiryJob {
     @Transactional
     public void expirePendingOrders() {
         LocalDateTime cutoff = LocalDateTime.now().minusMinutes(10);
-        List<Order> orders = orderRepository.findTop50ByStatusAndCreatedAtBefore(OrderStatus.PENDING, cutoff);
+        List<Order> orders = orderRepository.findTop50ByStatusInAndCreatedAtBefore(
+                List.of(OrderStatus.PENDING_PAYMENT, OrderStatus.PAYMENT_FAILED),
+                cutoff
+        );
 
         for (Order order : orders) {
-            order.setStatus(OrderStatus.CANCELLED);
+            order.setStatus(OrderStatus.EXPIRED);
             orderRepository.save(order);
             log.info("Expired pending order. orderReference={}, orderId={}", order.getReference(), order.getId());
         }

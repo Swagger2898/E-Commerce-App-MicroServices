@@ -5,6 +5,7 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.*;
@@ -23,6 +24,7 @@ public class ProductService {
         return repository.save(product).getId();
     }
 
+    @Transactional
     public List<ProductPurchaseResponse> purchaseProducts(List<ProductPurchaseRequest> request) {
         List<Integer> productIds = request
                 .stream()
@@ -42,12 +44,10 @@ public class ProductService {
         for(int i=0;i<storedProducts.size();i++){
             Product product = storedProducts.get(i);
             ProductPurchaseRequest productRequest = storedRequest.get(i);
-            if(product.getAvailableQuantity()<productRequest.quantity()){
+            int updatedRows = repository.decrementAvailableQuantityIfEnoughStock(product.getId(), productRequest.quantity());
+            if(updatedRows == 0){
                 throw new ProductPurchaseException("Insufficient stock quality for product with ID:: " +productRequest.productId());
             }
-            double newAvailableQuantity = product.getAvailableQuantity() - productRequest.quantity();
-            product.setAvailableQuantity(newAvailableQuantity);
-            repository.save(product);
             purchasedProducts.add(mapper.toProductPurchaseResponse(product, productRequest.quantity()));
         }
 
