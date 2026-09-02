@@ -69,21 +69,57 @@ public class PaymentReconciliationJob {
         }
     }
 
-    private Optional<com.razorpay.Payment> resolvePaymentAttempt(com.ecart.payment.payment.Payment payment) throws Exception {
-        if (payment.getPaymentId() != null && !payment.getPaymentId().isBlank()) {
-            return Optional.of(razorpayClient.payments.fetch(payment.getPaymentId()));
+    private Optional<com.razorpay.Payment> resolvePaymentAttempt(
+            com.ecart.payment.payment.Payment payment
+    ) throws Exception {
+
+        if (payment.getPaymentId() != null
+                && !payment.getPaymentId().isBlank()) {
+            return Optional.of(
+                    razorpayClient.payments.fetch(
+                            payment.getPaymentId()
+                    )
+            );
         }
 
-        List<com.razorpay.Payment> attempts = razorpayClient.orders.fetchPayments(payment.getGatewayOrderId());
+        List<com.razorpay.Payment> attempts =
+                razorpayClient.orders.fetchPayments(
+                        payment.getGatewayOrderId()
+                );
 
+        // First preference: any CAPTURED payment
+        Optional<com.razorpay.Payment> capturedPayment =
+                attempts.stream()
+                        .filter(attempt ->
+                                "captured".equalsIgnoreCase(
+                                        attempt.get("status")
+                                )
+                        )
+                        .max(
+                                Comparator.comparingLong(
+                                        this::extractCreatedAt
+                                )
+                        );
+
+        if (capturedPayment.isPresent()) {
+            return capturedPayment;
+        }
+
+        // Second preference: latest FAILED payment
         return attempts.stream()
-                .filter(attempt -> isFinalOrPreferredStatus(attempt.get("status")))
-                .max(Comparator.comparingLong(this::extractCreatedAt));
+                .filter(attempt ->
+                        "failed".equalsIgnoreCase(
+                                attempt.get("status")
+                        )
+                )
+                .max(
+                        Comparator.comparingLong(
+                                this::extractCreatedAt
+                        )
+                );
     }
 
-    private boolean isFinalOrPreferredStatus(String status) {
-        return "captured".equalsIgnoreCase(status) || "failed".equalsIgnoreCase(status);
-    }
+
 
     private long extractCreatedAt(com.razorpay.Payment payment) {
         Object createdAt = payment.get("created_at");

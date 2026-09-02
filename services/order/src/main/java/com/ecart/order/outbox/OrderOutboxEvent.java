@@ -1,4 +1,4 @@
-package com.ecart.payment.outbox;
+package com.ecart.order.outbox;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -31,13 +31,13 @@ import java.util.UUID;
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(
-        name = "payment_outbox_event",
+        name = "order_outbox_event",
         indexes = {
-                // Prevents full table scans on high-throughput polling
-                @Index(name = "idx_payment_outbox_status_created_at", columnList = "status, createdAt")
+                // Essential for SKIP LOCKED polling throughput
+                @Index(name = "idx_outbox_status_created_at", columnList = "status, createdAt")
         }
 )
-public class OutboxEvent {
+public class OrderOutboxEvent {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -54,13 +54,13 @@ public class OutboxEvent {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private OutboxStatus status;
+    private OrderOutboxStatus status;
 
     @CreatedDate
     @Column(updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
-    // 1. Updated automatically on every transition (e.g., NEW -> PROCESSING)
+    // 1. Tracks state transitions (NEW -> PROCESSING -> SENT/FAILED)
     @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
@@ -75,7 +75,7 @@ public class OutboxEvent {
     @Column(columnDefinition = "TEXT")
     private String failureReason;
 
-    // 2. Guards against silent overwrite races between publisher and reaper
+    // 2. Prevents worker-reaper race conditions
     @Version
     private Long version;
 }

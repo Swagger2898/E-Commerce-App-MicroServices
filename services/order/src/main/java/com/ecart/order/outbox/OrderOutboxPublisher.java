@@ -1,6 +1,6 @@
-package com.ecart.payment.outbox;
+package com.ecart.order.outbox;
 
-import com.ecart.payment.event.PaymentEvent;
+import com.ecart.order.kafka.OrderConfirmation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -18,47 +18,48 @@ import java.util.concurrent.TimeUnit;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class OutboxPublisher {
+public class OrderOutboxPublisher {
 
     private static final int BATCH_SIZE = 50;
     private static final int MAX_RETRIES = 5;
     private static final long KAFKA_SEND_TIMEOUT_SECONDS = 10;
-    private static final String PAYMENT_STATUS_TOPIC = "payment-status-topic";
+    private static final String ORDER_TOPIC = "order-topic";
 
-    private final OutboxDatabaseService outboxDatabaseService;
-    private final KafkaTemplate<String, PaymentEvent> kafkaTemplate;
+    private final OrderOutboxDatabaseService orderOutboxDatabaseService;
+    private final KafkaTemplate<String, OrderConfirmation> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
     @Scheduled(fixedDelay = 5000)
     public void publishNewEvents() {
-        // --- PHASE 1: Fast claim in short DB transaction (~2ms) ---
-        List<OutboxEvent> events = outboxDatabaseService.claimNextBatch(BATCH_SIZE);
+        // --- PHASE 1: Claim batch in short DB transaction (~2ms) ---
+        List<OrderOutboxEvent> events = orderOutboxDatabaseService.claimNextBatch(BATCH_SIZE);
         if (events.isEmpty()) {
             return;
         }
 
-        // --- PHASE 2: Kafka network I/O (ZERO DB connections held) ---
+        // --- PHASE 2: Async Kafka dispatch (ZERO DB connections held) ---
         List<CompletableFuture<?>> futures = new ArrayList<>();
 
-        for (OutboxEvent event : events) {
-            PaymentEvent paymentEvent;
+        for (OrderOutboxEvent event : events) {
+            OrderConfirmation orderConfirmation;
             try {
-                paymentEvent = objectMapper.readValue(event.getPayload(), PaymentEvent.class);
+                orderConfirmation = objectMapper.readValue(event.getPayload(), OrderConfirmation.class);
             } catch (JsonProcessingException e) {
                 markFailed(event, "Malformed payload: " + e.getMessage());
-                log.error("Poison outbox event detected. outboxEventId={}", event.getId(), e);
+                log.error("Poison order outbox event detected. outboxEventId={}, orderReference={}",
+                        event.getId(), event.getOrderReference(), e);
                 continue;
             }
 
             CompletableFuture<?> future = kafkaTemplate.send(
-                            PAYMENT_STATUS_TOPIC,
-                            paymentEvent.orderReference(),
-                            paymentEvent
+                            ORDER_TOPIC,
+                            event.getOrderReference(),
+                            orderConfirmation
                     )
                     .orTimeout(KAFKA_SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                     .whenComplete((sendResult, throwable) -> {
                         if (throwable == null) {
-                            event.setStatus(OutboxStatus.SENT);
+                            event.setStatus(OrderOutboxStatus.SENT);
                             event.setSentAt(LocalDateTime.now());
                         } else {
                             int attempts = event.getRetryCount() + 1;
@@ -67,12 +68,12 @@ public class OutboxPublisher {
                             if (attempts >= MAX_RETRIES) {
                                 markFailed(event, throwable.getMessage());
                             } else {
-                                // Reset back to NEW so a subsequent cycle picks it up for retry
-                                event.setStatus(OutboxStatus.NEW);
+                                // Reset to NEW so subsequent polling cycles can retry
+                                event.setStatus(OrderOutboxStatus.NEW);
                             }
 
-                            log.error("Failed to publish outbox event to Kafka. attempt={}/{}, outboxEventId={}",
-                                    attempts, MAX_RETRIES, event.getId(), throwable);
+                            log.error("Failed to publish order outbox event to Kafka. attempt={}/{}, outboxEventId={}, orderReference={}",
+                                    attempts, MAX_RETRIES, event.getId(), event.getOrderReference(), throwable);
                         }
                     });
 
@@ -83,20 +84,20 @@ public class OutboxPublisher {
             try {
                 CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
             } catch (Exception ex) {
-                log.debug("One or more Kafka dispatches completed exceptionally during batch join", ex);
+                log.debug("One or more Kafka dispatch futures completed exceptionally during order batch join", ex);
             }
         }
 
-        // --- PHASE 3: Fast update in separate short DB transaction (~2ms) ---
+        // --- PHASE 3: Persist results in separate short DB transaction (~2ms) ---
         try {
-            outboxDatabaseService.persistBatchResults(events);
+            orderOutboxDatabaseService.persistBatchResults(events);
         } catch (Exception ex) {
-            log.error("Failed to persist final batch outbox states to DB.", ex);
+            log.error("Failed to batch save order outbox events to DB. Events will be retried on next poll.", ex);
         }
     }
 
-    private void markFailed(OutboxEvent event, String reason) {
-        event.setStatus(OutboxStatus.FAILED);
+    private void markFailed(OrderOutboxEvent event, String reason) {
+        event.setStatus(OrderOutboxStatus.FAILED);
         event.setFailureReason(reason);
     }
 }

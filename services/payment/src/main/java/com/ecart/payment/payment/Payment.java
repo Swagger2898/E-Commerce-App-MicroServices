@@ -40,6 +40,8 @@ public class Payment {
     @Column(insertable = false)
     @LastModifiedDate
     private LocalDateTime lastModifiedDate;
+    @Column(nullable = false)
+    private Integer failedObservationCount = 0;
 
     //persisting data
     @Embedded

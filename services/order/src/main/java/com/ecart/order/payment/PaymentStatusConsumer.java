@@ -96,8 +96,6 @@ public class PaymentStatusConsumer {
 
             if (order.getStatus() == OrderStatus.PENDING_PAYMENT) {
                 log.info("Confirming PENDING_PAYMENT order {}", order.getReference());
-            } else if (order.getStatus() == OrderStatus.PAYMENT_FAILED) {
-                log.info("Recovering PAYMENT_FAILED order {} to CONFIRMED after successful payment", order.getReference());
             } else {
                 log.info("Ignoring success payment event for non-active order. orderReference={}, currentOrderStatus={}, paymentId={}",
                         order.getReference(), order.getStatus(), event.paymentId());

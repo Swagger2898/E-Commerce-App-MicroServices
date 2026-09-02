@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.HexFormat;
 
 @RestController
@@ -77,7 +78,13 @@ public class PaymentWebHookController {
             byte[] hash = sha256Hmac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
             String computedSignature = HexFormat.of().formatHex(hash).toLowerCase();
 
-            return computedSignature.equals(actualSignature);
+
+            //The reason is that MessageDigest.isEqual() performs a constant-time comparison, making timing attacks harder.
+//========================for safer practises=======================
+            return MessageDigest.isEqual(
+                    computedSignature.getBytes(StandardCharsets.UTF_8),
+                    actualSignature.getBytes(StandardCharsets.UTF_8)
+            );
         } catch (Exception e) {
             log.error("❌ Error verifying Razorpay signature", e);
             return false;
