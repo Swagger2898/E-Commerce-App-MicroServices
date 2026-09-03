@@ -14,7 +14,7 @@ spec:
         - name: config-server
           image: ghcr.io/swagger2898/config-server:latest
           imagePullPolicy: Always
-          command: ["java", "-jar", "app.jar", "--spring.profiles.active=k8s,native"]
+          command: ["java", "-jar", "app.jar", "--spring.profiles.active=native"]
           ports: [{ containerPort: 8888 }]
 ---
 apiVersion: v1
@@ -26,6 +26,7 @@ spec:
   selector: { app: config-server }
   ports: [{ port: 8888, targetPort: 8888 }]
 ---
+
 # ---------------- discovery (no deps) ----------------
 apiVersion: apps/v1
 kind: Deployment
@@ -38,11 +39,20 @@ spec:
   template:
     metadata: { labels: { app: discovery } }
     spec:
+      initContainers:
+        - name: wait-for-config-server
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z config-server 8888; do echo waiting for config-server; sleep 3; done']
       containers:
         - name: discovery
           image: ghcr.io/swagger2898/discovery:latest
           imagePullPolicy: Always
           ports: [{ containerPort: 8761 }]
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:configserver:http://config-server:8888"
 ---
 apiVersion: v1
 kind: Service
@@ -53,6 +63,7 @@ spec:
   selector: { app: discovery }
   ports: [{ port: 8761, targetPort: 8761 }]
 ---
+
 # ---------------- customer ----------------
 apiVersion: apps/v1
 kind: Deployment
@@ -77,6 +88,11 @@ spec:
           image: ghcr.io/swagger2898/customer:latest
           imagePullPolicy: Always
           ports: [{ containerPort: 8090 }]
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:configserver:http://config-server:8888"
 ---
 apiVersion: v1
 kind: Service
@@ -87,6 +103,7 @@ spec:
   selector: { app: customer }
   ports: [{ port: 8090, targetPort: 8090 }]
 ---
+
 # ---------------- product ----------------
 apiVersion: apps/v1
 kind: Deployment
@@ -111,6 +128,11 @@ spec:
           image: ghcr.io/swagger2898/product:latest
           imagePullPolicy: Always
           ports: [{ containerPort: 8050 }]
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:configserver:http://config-server:8888"
 ---
 apiVersion: v1
 kind: Service
@@ -121,6 +143,7 @@ spec:
   selector: { app: product }
   ports: [{ port: 8050, targetPort: 8050 }]
 ---
+
 # ---------------- payment ----------------
 apiVersion: apps/v1
 kind: Deployment
@@ -145,6 +168,11 @@ spec:
           image: ghcr.io/swagger2898/payment:latest
           imagePullPolicy: Always
           ports: [{ containerPort: 8060 }]
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:configserver:http://config-server:8888"
 ---
 apiVersion: v1
 kind: Service
@@ -155,6 +183,7 @@ spec:
   selector: { app: payment }
   ports: [{ port: 8060, targetPort: 8060 }]
 ---
+
 # ---------------- order ----------------
 apiVersion: apps/v1
 kind: Deployment
@@ -179,6 +208,11 @@ spec:
           image: ghcr.io/swagger2898/order:latest
           imagePullPolicy: Always
           ports: [{ containerPort: 8070 }]
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:configserver:http://config-server:8888"
 ---
 apiVersion: v1
 kind: Service
@@ -189,6 +223,7 @@ spec:
   selector: { app: order }
   ports: [{ port: 8070, targetPort: 8070 }]
 ---
+
 # ---------------- notification ----------------
 apiVersion: apps/v1
 kind: Deployment
@@ -213,6 +248,11 @@ spec:
           image: ghcr.io/swagger2898/notification:latest
           imagePullPolicy: Always
           ports: [{ containerPort: 8040 }]
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:configserver:http://config-server:8888"
 ---
 apiVersion: v1
 kind: Service
@@ -223,6 +263,7 @@ spec:
   selector: { app: notification }
   ports: [{ port: 8040, targetPort: 8040 }]
 ---
+
 # ---------------- gateway (waits on everything, exposed externally) ----------------
 apiVersion: apps/v1
 kind: Deployment
@@ -247,6 +288,11 @@ spec:
           image: ghcr.io/swagger2898/gateway:latest
           imagePullPolicy: Always
           ports: [{ containerPort: 8222 }]
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "k8s"
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:configserver:http://config-server:8888"
 ---
 apiVersion: v1
 kind: Service
