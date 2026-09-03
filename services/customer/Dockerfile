@@ -3,22 +3,21 @@ FROM maven:3.9.5-eclipse-temurin-17 AS build
 WORKDIR /workspace
 COPY pom.xml .
 COPY src ./src
-RUN mvn -B -DskipTests package
-
+RUN mvn -B -DskipTests clean package
 
 # ---------- Runtime Stage ----------
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 
-# Copy jar from build stage
-ARG JAR_FILE=/workspace/target/*-SNAPSHOT.jar
-COPY --from=build ${JAR_FILE} app.jar
-
-# Create non-root user and group (Debian syntax)
+# Create non-root user and group
 RUN groupadd --system appgroup && \
     useradd --system --gid appgroup --create-home appuser
 
-# Use non-root user
+# Copy the built jar directly using Docker's native wildcard resolution
+COPY --from=build /workspace/target/*.jar app.jar
+
+# Ensure proper permissions for non-root execution
+RUN chown -R appuser:appgroup /app
 USER appuser
 
 EXPOSE 8090
