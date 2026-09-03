@@ -1,4 +1,4 @@
-package notification;
+package com.ecart.notification;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
