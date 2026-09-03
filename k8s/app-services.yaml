@@ -1,0 +1,259 @@
+# ---------------- config-server (no deps) ----------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: config-server } }
+  template:
+    metadata: { labels: { app: config-server } }
+    spec:
+      containers:
+        - name: config-server
+          image: ghcr.io/swagger2898/config-server:latest
+          imagePullPolicy: Always
+          command: ["java", "-jar", "app.jar", "--spring.profiles.active=k8s,native"]
+          ports: [{ containerPort: 8888 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-server
+  namespace: ecommerce
+spec:
+  selector: { app: config-server }
+  ports: [{ port: 8888, targetPort: 8888 }]
+---
+# ---------------- discovery (no deps) ----------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discovery
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: discovery } }
+  template:
+    metadata: { labels: { app: discovery } }
+    spec:
+      containers:
+        - name: discovery
+          image: ghcr.io/swagger2898/discovery:latest
+          imagePullPolicy: Always
+          ports: [{ containerPort: 8761 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: discovery
+  namespace: ecommerce
+spec:
+  selector: { app: discovery }
+  ports: [{ port: 8761, targetPort: 8761 }]
+---
+# ---------------- customer ----------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: customer } }
+  template:
+    metadata: { labels: { app: customer } }
+    spec:
+      initContainers:
+        - name: wait-for-config-server
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z config-server 8888; do echo waiting for config-server; sleep 3; done']
+        - name: wait-for-discovery
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z discovery 8761; do echo waiting for discovery; sleep 3; done']
+      containers:
+        - name: customer
+          image: ghcr.io/swagger2898/customer:latest
+          imagePullPolicy: Always
+          ports: [{ containerPort: 8090 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: customer
+  namespace: ecommerce
+spec:
+  selector: { app: customer }
+  ports: [{ port: 8090, targetPort: 8090 }]
+---
+# ---------------- product ----------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: product } }
+  template:
+    metadata: { labels: { app: product } }
+    spec:
+      initContainers:
+        - name: wait-for-config-server
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z config-server 8888; do echo waiting for config-server; sleep 3; done']
+        - name: wait-for-discovery
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z discovery 8761; do echo waiting for discovery; sleep 3; done']
+      containers:
+        - name: product
+          image: ghcr.io/swagger2898/product:latest
+          imagePullPolicy: Always
+          ports: [{ containerPort: 8050 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product
+  namespace: ecommerce
+spec:
+  selector: { app: product }
+  ports: [{ port: 8050, targetPort: 8050 }]
+---
+# ---------------- payment ----------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: payment } }
+  template:
+    metadata: { labels: { app: payment } }
+    spec:
+      initContainers:
+        - name: wait-for-config-server
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z config-server 8888; do echo waiting for config-server; sleep 3; done']
+        - name: wait-for-discovery
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z discovery 8761; do echo waiting for discovery; sleep 3; done']
+      containers:
+        - name: payment
+          image: ghcr.io/swagger2898/payment:latest
+          imagePullPolicy: Always
+          ports: [{ containerPort: 8060 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment
+  namespace: ecommerce
+spec:
+  selector: { app: payment }
+  ports: [{ port: 8060, targetPort: 8060 }]
+---
+# ---------------- order ----------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: order } }
+  template:
+    metadata: { labels: { app: order } }
+    spec:
+      initContainers:
+        - name: wait-for-config-server
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z config-server 8888; do echo waiting for config-server; sleep 3; done']
+        - name: wait-for-discovery
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z discovery 8761; do echo waiting for discovery; sleep 3; done']
+      containers:
+        - name: order
+          image: ghcr.io/swagger2898/order:latest
+          imagePullPolicy: Always
+          ports: [{ containerPort: 8070 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order
+  namespace: ecommerce
+spec:
+  selector: { app: order }
+  ports: [{ port: 8070, targetPort: 8070 }]
+---
+# ---------------- notification ----------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: notification } }
+  template:
+    metadata: { labels: { app: notification } }
+    spec:
+      initContainers:
+        - name: wait-for-config-server
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z config-server 8888; do echo waiting for config-server; sleep 3; done']
+        - name: wait-for-discovery
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z discovery 8761; do echo waiting for discovery; sleep 3; done']
+      containers:
+        - name: notification
+          image: ghcr.io/swagger2898/notification:latest
+          imagePullPolicy: Always
+          ports: [{ containerPort: 8040 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification
+  namespace: ecommerce
+spec:
+  selector: { app: notification }
+  ports: [{ port: 8040, targetPort: 8040 }]
+---
+# ---------------- gateway (waits on everything, exposed externally) ----------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: gateway } }
+  template:
+    metadata: { labels: { app: gateway } }
+    spec:
+      initContainers:
+        - name: wait-for-config-server
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z config-server 8888; do echo waiting for config-server; sleep 3; done']
+        - name: wait-for-discovery
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z discovery 8761; do echo waiting for discovery; sleep 3; done']
+      containers:
+        - name: gateway
+          image: ghcr.io/swagger2898/gateway:latest
+          imagePullPolicy: Always
+          ports: [{ containerPort: 8222 }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: ecommerce
+spec:
+  selector: { app: gateway }
+  ports: [{ port: 8222, targetPort: 8222 }]
+  type: LoadBalancer
