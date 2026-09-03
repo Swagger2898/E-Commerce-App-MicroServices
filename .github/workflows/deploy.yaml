@@ -57,7 +57,6 @@ jobs:
           SPRING_CLOUD_CONFIG_ENABLED: "false"
           SPRING_CLOUD_CONFIG_IMPORT_CHECK_ENABLED: "false"
           SPRING_CLOUD_CONFIG_IMPORTCHECK_ENABLED: "false"
-          EUREKA_CLIENT_ENABLED: "false"
           SPRING_KAFKA_LISTENER_AUTO_STARTUP: "false"
         run: mvn -B test
 
