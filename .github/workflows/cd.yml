@@ -1,6 +1,6 @@
 name: CD - Deploy
 
-on:
+'on':
   workflow_dispatch:
 
 jobs:
