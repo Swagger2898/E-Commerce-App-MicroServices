@@ -308,17 +308,12 @@ spec:
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:26.0.0
-          args: ["start-dev"]
+          args: ["start", "--hostname-strict=false", "--http-enabled=true"]
           ports: [{ containerPort: 8080 }]
           env:
             - { name: KEYCLOAK_ADMIN, valueFrom: { secretKeyRef: { name: infra-credentials, key: KEYCLOAK_ADMIN } } }
             - { name: KEYCLOAK_ADMIN_PASSWORD, valueFrom: { secretKeyRef: { name: infra-credentials, key: KEYCLOAK_ADMIN_PASSWORD } } }
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: keycloak
-  namespace: ecommerce
-spec:
-  selector: { app: keycloak }
-  ports: [{ port: 8080, targetPort: 8080 }]
+            - { name: KC_DB, value: "postgres" }
+            - { name: KC_DB_URL, value: "jdbc:postgresql://postgresql:5432/keycloak" }
+            - { name: KC_DB_USERNAME, valueFrom: { secretKeyRef: { name: infra-credentials, key: POSTGRES_USER } } }
+            - { name: KC_DB_PASSWORD, valueFrom: { secretKeyRef: { name: infra-credentials, key: POSTGRES_PASSWORD } } }
