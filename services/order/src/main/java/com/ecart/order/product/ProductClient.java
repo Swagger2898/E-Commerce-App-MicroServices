@@ -7,6 +7,9 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 
@@ -22,8 +25,15 @@ public class ProductClient {
 
     public List<PurchaseResponse> purchaseProducts(List<PurchaseRequest> requestBody){
 
+        HttpServletRequest currentRequest = ((ServletRequestAttributes)
+                RequestContextHolder.currentRequestAttributes()).getRequest();
+        String authHeader = currentRequest.getHeader(HttpHeaders.AUTHORIZATION);
+
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+        if (authHeader != null) {
+            headers.set(HttpHeaders.AUTHORIZATION, authHeader);
+        }
 
         HttpEntity<List<PurchaseRequest>> requestEntity = new HttpEntity<>(requestBody,headers);
         ParameterizedTypeReference<List<PurchaseResponse>> responseType = new ParameterizedTypeReference<>(){};

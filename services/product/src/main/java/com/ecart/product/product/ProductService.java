@@ -28,14 +28,15 @@ public class ProductService {
     public List<ProductPurchaseResponse> purchaseProducts(List<ProductPurchaseRequest> request) {
         List<Integer> productIds = request
                 .stream()
-                .map(ProductPurchaseRequest :: productId)
+                .map(ProductPurchaseRequest::productId)
                 .toList();
 
         List<Product> storedProducts = repository.findAllByIdInOrderById(productIds);
-        if(productIds.size()!=storedProducts.size()){
+
+        if (new HashSet<>(productIds).size() != storedProducts.size()) {
             throw new ProductPurchaseException("One or more products don't exist");
         }
-        List<ProductPurchaseRequest> storedRequest =request
+        List<ProductPurchaseRequest> storedRequest = request
                 .stream()
                 .sorted(Comparator.comparing(ProductPurchaseRequest::productId))
                 .toList();
@@ -52,7 +53,6 @@ public class ProductService {
         }
 
         return purchasedProducts;
-
     }
 
     public ProductResponse findById(Integer productId) {

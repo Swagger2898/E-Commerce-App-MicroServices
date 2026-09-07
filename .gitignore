@@ -31,3 +31,7 @@ node_modules/
 # Temp
 *.tmp
 *.swp
+
+token.txt
+order.json
+order-app.jar
