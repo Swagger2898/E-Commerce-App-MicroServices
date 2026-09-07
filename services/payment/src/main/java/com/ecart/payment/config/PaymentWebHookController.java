@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -24,13 +26,18 @@ import java.util.HexFormat;
 public class PaymentWebHookController {
 
     private final PaymentService paymentService; // To update payment status in your DB
-    private final String razorpayWebhookSecret = "68cqMF4ORLpMfHL3lxBwTt8n"; // Set this securely (ideally in application properties)
+
+    @Value("${razorpay.webhook_secret:${razorpay.key_secret:68cqMF4ORLpMfHL3lxBwTt8n}}")
+    private String razorpayWebhookSecret;
 
     @PostMapping("/webhook")
     public ResponseEntity<String> handleRazorpayWebhook(HttpServletRequest request,
-                                                        @RequestHeader("X-Razorpay-Signature") String razorpaySignature) {
+                                                        @RequestHeader(value = "X-Razorpay-Signature", required = false) String razorpaySignature) {
 
-
+        if (razorpaySignature == null || razorpaySignature.isBlank()) {
+            log.warn("Webhook signature missing in request header");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Missing signature");
+        }
 
         try {
             // Read request body
@@ -48,19 +55,35 @@ public class PaymentWebHookController {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode jsonNode = mapper.readTree(payload);
 
-            String event = jsonNode.get("event").asText();
+            String event = jsonNode.path("event").asText("");
 
             if ("payment.captured".equals(event)) {
                 // Extract payment info
-                JsonNode paymentEntity = jsonNode.get("payload").get("payment").get("entity");
-                String paymentId = paymentEntity.get("id").asText();
-                String orderRef = paymentEntity.get("order_id").asText();
-                Integer amount = paymentEntity.get("amount").asInt();
+                JsonNode paymentEntity = jsonNode.path("payload").path("payment").path("entity");
+                String paymentId = paymentEntity.path("id").asText(null);
+                String orderRef = paymentEntity.path("order_id").asText(null);
+                Integer amount = paymentEntity.path("amount").asInt(0);
 
-                // Call your service to mark payment successful
-                paymentService.handlePaymentCaptured(orderRef, paymentId, amount);
+                if (orderRef != null && paymentId != null) {
+                    // Call your service to mark payment successful
+                    paymentService.handlePaymentCaptured(orderRef, paymentId, amount);
+                    log.info("✅ Processed 'payment.captured' for orderRef: {}, paymentId: {}", orderRef, paymentId);
+                } else {
+                    log.warn("Malformed 'payment.captured' payload: missing order_id or id");
+                }
+            } else if ("payment.failed".equals(event)) {
+                JsonNode paymentEntity = jsonNode.path("payload").path("payment").path("entity");
+                String paymentId = paymentEntity.path("id").asText(null);
+                String orderRef = paymentEntity.path("order_id").asText(null);
 
-                log.info("✅ Processed 'payment.captured' for paymentId: {}", paymentId);
+                if (orderRef != null) {
+                    paymentService.handlePaymentFailed(orderRef, paymentId);
+                    log.info("✅ Processed 'payment.failed' for orderRef: {}, paymentId: {}", orderRef, paymentId);
+                } else {
+                    log.warn("Malformed 'payment.failed' payload: missing order_id");
+                }
+            } else {
+                log.info("Ignoring unhandled Razorpay webhook event: {}", event);
             }
 
             return ResponseEntity.ok("Webhook processed");

@@ -14,6 +14,7 @@ public class PaymentMapper {
                 .paymentMethod(request.paymentMethod())
                 .amount(request.amount())
                 .paymentStatus(PaymentStatus.PENDING) // optional default
+                .failedObservationCount(0)
                 .customer(toCustomerEntity(request.customer())) // ✅ persist customer
                 .build();
     }

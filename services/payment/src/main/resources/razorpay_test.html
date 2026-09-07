@@ -13,18 +13,18 @@
     document.getElementById("pay-btn").onclick = function (e) {
         var options = {
             "key": "rzp_test_5pZoJqQBlKYB8U",
-            "amount": "15000",
+            "amount": "69999",
             "currency": "INR",
             "name": "Your Store",
             "description": "Test Payment",
-            "order_id": "order_RGda6loWvRfcT2",
+            "order_id": "order_TZF1fHG4LbK2qJ",
             "handler": function (response){
                 alert("✅ Payment Success! Payment ID: " + response.razorpay_payment_id);
                 console.log(response);
             },
             "prefill": {
-                "name": "Swapnil",
-                "email": "swapnil@example.com"
+                "name": "John",
+                "email": "john.doe@example.com"
             },
             "theme": {
                 "color": "#3399cc"

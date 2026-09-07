@@ -101,6 +101,7 @@ public class PaymentService {
         try {
             outboxRepository.save(
                     OutboxEvent.builder()
+                            .orderReference(payment.getOrderReference())
                             .eventType(PaymentEvent.class.getSimpleName())
                             .payload(objectMapper.writeValueAsString(paymentEvent))
                             .status(OutboxStatus.NEW)
@@ -164,6 +165,7 @@ public class PaymentService {
         try {
             outboxRepository.save(
                     OutboxEvent.builder()
+                            .orderReference(payment.getOrderReference())
                             .eventType(PaymentEvent.class.getSimpleName())
                             .payload(objectMapper.writeValueAsString(paymentEvent))
                             .status(OutboxStatus.NEW)

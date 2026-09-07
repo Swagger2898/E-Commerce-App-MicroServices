@@ -40,8 +40,16 @@ public class Payment {
     @Column(insertable = false)
     @LastModifiedDate
     private LocalDateTime lastModifiedDate;
+    @Builder.Default
     @Column(nullable = false)
     private Integer failedObservationCount = 0;
+
+    @PrePersist
+    public void prePersist() {
+        if (failedObservationCount == null) {
+            failedObservationCount = 0;
+        }
+    }
 
     //persisting data
     @Embedded
